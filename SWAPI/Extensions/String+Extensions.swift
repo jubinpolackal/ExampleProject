@@ -12,6 +12,10 @@ public extension String {
        !self.isEmpty
    }
    
+   var numericPart: Double {
+       Double(self.trimmingCharacters(in: CharacterSet.letters)) ?? Double.greatestFiniteMagnitude
+   }
+   
    func getIdFromUrl() -> Int? {
       let urlString = self
       if let lastComponent = urlString.split(separator: "/").last,

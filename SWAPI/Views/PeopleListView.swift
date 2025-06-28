@@ -10,6 +10,14 @@ import SwiftUI
 struct PeopleListView: View {
    @StateObject var viewModel = PeopleViewModel(webService: SWAPIWebService())
    @State private var searchText: String = ""
+   @State private var sortOption: SortOption = .name
+   
+   enum SortOption: String, CaseIterable, Identifiable {
+      case name = "Name"
+      case birthYear = "Birth Year"
+      var id: String { rawValue }
+   }
+   
    var body: some View {
       NavigationStack {
          Group {
@@ -24,6 +32,19 @@ struct PeopleListView: View {
             }
          }
          .navigationTitle(Text("People"))
+         .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+               Menu {
+                  Picker("Sort By", selection: $sortOption) {
+                     ForEach(SortOption.allCases, id: \.self) { option in
+                        Text(option.rawValue)
+                     }
+                  }
+               } label: {
+                  Label("Sort", systemImage: "arrow.up.arrow.down")
+               }
+            }
+         }
          .task {
             await viewModel.fetchPeopleAsync()
          }.navigationDestination(for: Person.self) { person in
@@ -35,10 +56,23 @@ struct PeopleListView: View {
    // MARK: - Subviews
    
    private var peopleList: some View {
-       List {
-           ForEach(viewModel.people.filter {
-               searchText.isEmpty || $0.name.lowercased().contains(searchText.lowercased())
-           }) { person in
+      let filteredAndSortedPeople = viewModel.people
+         .filter {
+            searchText.isEmpty || $0.name.lowercased().contains(searchText.lowercased())
+         }
+         .sorted(by: { lhs, rhs in
+            switch sortOption {
+            case .name:
+               return lhs.name < rhs.name
+            case .birthYear:
+               let lhsYear = lhs.birthYear.numericPart
+               let rhsYear = rhs.birthYear.numericPart
+               return lhsYear < rhsYear
+            }
+         })
+      
+       return List {
+           ForEach(filteredAndSortedPeople) { person in
                NavigationLink(value: person) {
                    TwoTextCellView(leftText: person.name, rightText: person.birthYear)
                }
